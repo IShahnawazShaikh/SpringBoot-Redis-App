@@ -1,5 +1,6 @@
 package com.scaler.redisapp.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
@@ -28,6 +29,11 @@ public class RedisConfiguration {
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
         redisTemplate.setHashValueSerializer(new JdkSerializationRedisSerializer());
         return redisTemplate;
+    }
+
+    @Bean
+    public ObjectMapper getMapper(){
+        return new ObjectMapper();
     }
 
 }

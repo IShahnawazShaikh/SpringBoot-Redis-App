@@ -1,5 +1,6 @@
 package com.scaler.redisapp.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scaler.redisapp.model.Person;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,7 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -17,21 +20,26 @@ public class RedisOperationController {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     private final Logger logger = LoggerFactory.getLogger(RedisOperationController.class);
 
     private static final String PERSON_KEY_PREFIX= "per::";
     private static final String PERSON_LIST_PREFIX="per_list::";
 
-    @PostMapping("/save")
+    private static final String PERSON_HASH_PREFIX="per_hash::";
+
+    @PostMapping("/save/key")
     public void savePerson(@RequestBody Person person){
         logger.info("Data: {}",person);
-      String key=getKey(person.getId());
+      String key=getKeyId(person.getId());
       redisTemplate.opsForValue().set(key,person);
     }
 
     @GetMapping("/fetch")
     public Person fetchPerson(@RequestParam("Id") Long id){
-        String key=getKey(id);
+        String key=getKeyId(id);
         return (Person) redisTemplate.opsForValue().get(key);
     }
 
@@ -70,7 +78,30 @@ public class RedisOperationController {
                 .collect(Collectors.toList());
     }
 
-    private String getKey(Long Id){
+    @PostMapping("/save/hash")
+    public void savePersonInHash(@RequestBody List<Person> listPerson){
+        listPerson.stream().forEach(person -> {
+            Map map= objectMapper.convertValue(person,Map.class);
+            redisTemplate.opsForHash().putAll(getHashId(person.getId()),map);
+        });
+    }
+
+    @GetMapping("/fetch/hash")
+    public List<Person> getPersonInHash(@RequestParam  List<Long> ids){
+        List<Person> resultPerson=new ArrayList<Person>();
+        ids.stream().forEach(id->{
+            Map map=redisTemplate.opsForHash().entries(getHashId(id));
+            resultPerson.add(objectMapper.convertValue(map,Person.class));
+        });
+        return resultPerson;
+    }
+
+
+    private String getHashId(Long id) {
+        return PERSON_HASH_PREFIX+id;
+    }
+
+    private String getKeyId(Long Id){
         return PERSON_KEY_PREFIX+Id;
     }
 }
